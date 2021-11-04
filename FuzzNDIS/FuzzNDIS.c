@@ -489,14 +489,14 @@ int  main() {
 				UINT iterations = 0;
 				BOOL nonull = FALSE;
 				if (argc >= 4) {
-					if (!strcmp(argv[2], "nonull")) {
+					if (!strcmp(argv[3], "nonull")) {
 						nonull = TRUE;
 					}
 					else {
-						iterations = strtoul(argv[2], NULL, 10);
+						iterations = strtoul(argv[3], NULL, 10);
 					}
 					if (argc == 5) {
-						if (!strcmp(argv[3], "nonull")) {
+						if (!strcmp(argv[4], "nonull")) {
 							nonull = TRUE;
 						}
 					}
