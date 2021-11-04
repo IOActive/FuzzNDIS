@@ -244,6 +244,28 @@ void fuzz_oid(HANDLE h, unsigned int oid, UINT iterations, BOOL nonull) {
 	return;
 }
 
+//IOCTL_NDIS_QUERY_GLOBAL_STATS 
+void enum_oids_fuzz(HANDLE h, UINT iterations, BOOL nonull) {
+	char in[5];
+	char out[100000];
+	int oid = OID_GEN_SUPPORTED_LIST;
+	memcpy(in, &oid, 4);
+	DWORD ret = 0;
+	BOOL r = DeviceIoControl(h, IOCTL_NDIS_QUERY_GLOBAL_STATS, in, 4, out, sizeof(out), &ret, NULL);
+	if (!r) {
+		printf("-> Error: DeviceIoControl() failed\n");
+		printf("  -> code: %08x\n", GetLastError());
+		return;
+	}
+	int i;
+	unsigned int* uip = (unsigned int*)out;
+	for (i = 0; i < ret / 4; i++) {
+		printf("  -> Fuzzing OID: [%d] 0x%x\n", i, *uip);
+		fuzz_oid(h, *uip, iterations, nonull);
+		uip++;
+	}
+	return *uip;
+}
 
 void fuzz_ioctl_oid_info(HANDLE h, UINT iterations) {
 	unsigned char oidlist[100000];
@@ -429,6 +451,7 @@ void show_help() {
 	printf("fuzz leaks <handle> <optional:iterations>\n");
 	//fuzzoid <handle> <oid> <iterations> <nonull>
 	printf("fuzzoid <handle> <oid> <optional:iterations>\n");
+	printf("fuzzoids <handle> <optional:iterations> <optional:nonull>\n");
 	printf("--\n");
 }
 
@@ -506,6 +529,29 @@ int  main() {
 				fuzz_oid(h, oid, iterations, nonull);
 			}
 		}	
+		else if (!strcmp(argv[0], "fuzzoids")) {
+			h = strtoul(argv[1], NULL, 16);
+			
+			if (argc >= 2) {
+				UINT iterations = 0;
+				BOOL nonull = FALSE;
+				if (argc >= 3) {
+					if (!strcmp(argv[2], "nonull")) {
+						nonull = TRUE;
+					}
+					else {
+						iterations = strtoul(argv[2], NULL, 10);
+					}
+					if (argc == 4) {
+						if (!strcmp(argv[3], "nonull")) {
+							nonull = TRUE;
+						}
+					}
+
+					enum_oids_fuzz(h, iterations, nonull);
+				}
+			}
+		}
 	
 		else if (!strcmp(argv[0], "?") || !strcmp(argv[0], "help")) {
 			show_help();
